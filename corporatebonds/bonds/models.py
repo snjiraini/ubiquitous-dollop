@@ -2,9 +2,27 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class ListedCompany(models.Model):
+    INDUSTRY_CHOICES = [
+        ('Agriculture', 'Agriculture'),
+        ('Automobiles & Accessories', 'Automobiles & Accessories'),
+        ('Banking', 'Banking'),
+        ('Commercial & Services', 'Commercial & Services'),
+        ('Construction & Allied', 'Construction & Allied'),
+        ('Energy & Petroleum', 'Energy & Petroleum'),
+        ('Insurance', 'Insurance'),
+        ('Investment', 'Investment'),
+        ('Investment Services', 'Investment Services'),
+        ('Manufacturing & Allied', 'Manufacturing & Allied'),
+        ('Telecommunication & Technology', 'Telecommunication & Technology'),
+        ('Real Estate Investment Trust', 'Real Estate Investment Trust'),
+        ('Exchange Traded Fund', 'Exchange Traded Fund'),
+    ]
+
     ISINCode = models.CharField(max_length=20, unique=True)
     company_name = models.CharField(max_length=255)
-    trading_symbol = models.CharField(max_length=50, unique=True)
+    trading_symbol = models.CharField(max_length=20, unique=True)
+    industry = models.CharField(max_length=50, choices=INDUSTRY_CHOICES, default='Banking')
+    company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)  # Upload to 'media/company_logos/'
 
     def __str__(self):
         return f"{self.company_name} ({self.trading_symbol})"

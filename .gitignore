@@ -1,1 +1,27 @@
-node_modules
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+*.swp
+*.swo
+
+# Ignore Django database files
+db.sqlite3
+db.sqlite3-journal
+
+# Ignore environment variables
+.env
+
+# Ignore compiled files
+*.pyc
+*.pyo
+
+# Ignore logs and temporary files
+*.log
+*.bak
+*.tmp
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore Node.js dependencies
+node_modules/
