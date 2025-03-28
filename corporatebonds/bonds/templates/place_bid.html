@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Place a Bid{% endblock %}
+
+{% block content %}
+<h2>Place a Bid for {{ bond.tokenname }}</h2>
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="bidamount" class="form-label">Bid Amount</label>
+        <input type="number" name="bidamount" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">Submit Bid</button>
+</form>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Available Bonds</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Token Name</th>
+                <th>Symbol</th>
+                <th>Coupon (%)</th>
+                <th>Maturity Date</th>
+                <th>Bid</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bond in bonds %}
+            <tr>
+                <td>{{ bond.token_name }}</td>
+                <td>{{ bond.token_symbol }}</td>
+                <td>{{ bond.coupon }}</td>
+                <td>{{ bond.maturity_date }}</td>
+                <td><a href="{% url 'place_bid' bond.id %}" class="btn btn-primary">Bid</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
