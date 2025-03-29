@@ -40,9 +40,11 @@
             <td>{{ bid.token.token_name }}</td>
             <td>${{ bid.bid_amount }}</td>
             <td>
-                <span class="status-dot {% if bid.bid_status == 'Pending' %}pending
-                                       {% elif bid.bid_status == 'Accepted' %}accepted
-                                       {% elif bid.bid_status == 'Rejected' %}rejected{% endif %}">
+                <!-- Status Dot -->
+                <span class="status-dot 
+                    {% if bid.bid_status == 'Pending' %}pending
+                    {% elif bid.bid_status == 'Accepted' %}accepted
+                    {% elif bid.bid_status == 'Rejected' %}rejected{% endif %}">
                 </span> 
                 {{ bid.bid_status }}
             </td>
@@ -54,4 +56,19 @@
         {% endfor %}
     </tbody>
 </table>
+
+<!-- Status Indicator Styles -->
+<style>
+    .status-dot {
+        height: 10px;
+        width: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .pending { background-color: #f0ad4e; }  /* Amber */
+    .accepted { background-color: #28a745; } /* Green */
+    .rejected { background-color: #dc3545; } /* Red */
+</style>
+
 {% endblock %}
