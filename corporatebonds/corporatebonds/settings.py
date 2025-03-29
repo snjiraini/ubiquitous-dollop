@@ -31,6 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'admin_interface',  # Add this before 'django.contrib.admin'
+    'colorfield',  # Required dependency
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
