@@ -20,11 +20,11 @@ from django.contrib.auth import views as auth_views
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
-from bonds.views import homepage, investor_login, view_bonds
+from bonds.views import homepage, investor_login, client_bid_page
 
 urlpatterns = [
     path('', homepage, name='homepage'),  # Default homepage
-    path('', lambda request: redirect('view_bonds')),  # Redirects root URL to bonds
+    path('', lambda request: redirect('client_bid_page')),  # Redirects root URL to bonds
     path('login/', include('django.contrib.auth.urls')),
     path('logout/', auth_views.LogoutView.as_view(), name='investor_logout'),  # Proper logout path
     path('bonds/', include('bonds.urls')),

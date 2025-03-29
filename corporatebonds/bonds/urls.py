@@ -1,7 +1,8 @@
 from django.urls import path
 from . import views
+from .views import homepage, client_bid_page
 
 urlpatterns = [
-    path('', views.view_bonds, name='view_bonds'),  # Default page for bonds
-    path('bid/<int:bond_id>/', views.place_bid, name='place_bid'),  # Page to place a bid
+    path('', homepage, name='homepage'),  # Homepage
+    path('place-bid/', client_bid_page, name='client_bid_page'),  # Client Bidding Page
 ]

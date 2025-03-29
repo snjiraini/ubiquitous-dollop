@@ -127,3 +127,4 @@ LOGIN_REDIRECT_URL = '/bonds/'  # Redirect to the bonds page after login
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+

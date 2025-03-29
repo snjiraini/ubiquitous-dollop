@@ -1,6 +1,12 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% block title %}Homepage{% endblock %}
 
 {% block content %}
-<h1>Welcome to the Corporate Bond Marketplace</h1>
-<p><a href="{% url 'view_bonds' %}" class="btn btn-primary">View Available Bonds</a></p>
+<div class="text-center mt-5">
+    <h2>Welcome, {{ user.username }}</h2>
+    <p class="lead">Manage your investments and bids here.</p>
+
+    <a href="{% url 'client_bid_page' %}" class="btn btn-primary">Place a Bid</a>
+</div>
 {% endblock %}

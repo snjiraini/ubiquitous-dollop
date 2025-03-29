@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class ListedCompany(models.Model):
     INDUSTRY_CHOICES = [
@@ -18,43 +19,63 @@ class ListedCompany(models.Model):
         ('Exchange Traded Fund', 'Exchange Traded Fund'),
     ]
 
-    ISINCode = models.CharField(max_length=20, unique=True)
-    company_name = models.CharField(max_length=255)
-    trading_symbol = models.CharField(max_length=20, unique=True)
-    industry = models.CharField(max_length=50, choices=INDUSTRY_CHOICES, default='Banking')
-    company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)  # Upload to 'media/company_logos/'
+    ISINCode = models.CharField(max_length=12, unique=True, verbose_name="ISIN Code")
+    company_name = models.CharField(max_length=255, verbose_name="Company Name")
+    trading_symbol = models.CharField(max_length=20, unique=True, db_index=True, verbose_name="Trading Symbol")
+    industry = models.CharField(max_length=50, choices=INDUSTRY_CHOICES, default='Banking', verbose_name="Industry")
+    company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True, verbose_name="Company Logo")
+
+    class Meta:
+        verbose_name = "Listed Company"
+        verbose_name_plural = "Listed Companies"
 
     def __str__(self):
         return f"{self.company_name} ({self.trading_symbol})"
 
 
 class ListedCompanyBond(models.Model):
-    token_name = models.CharField(max_length=255, unique=True)
-    token_symbol = models.CharField(max_length=10, unique=True)
-    initial_supply = models.DecimalField(max_digits=20, decimal_places=2)
-    treasure_account = models.CharField(max_length=255)
-    max_supply = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    issue_date = models.DateField()
-    maturity_date = models.DateField()
-    coupon = models.DecimalField(max_digits=5, decimal_places=2)
+    token_name = models.CharField(max_length=255, unique=True, verbose_name="Token Name")
+    token_symbol = models.CharField(max_length=10, unique=True, verbose_name="Token Symbol")
+    initial_supply = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Initial Supply")
+    treasure_account = models.CharField(max_length=255, verbose_name="Treasury Account")
+    max_supply = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True, verbose_name="Max Supply")
+    issue_date = models.DateField(verbose_name="Issue Date")
+    maturity_date = models.DateField(verbose_name="Maturity Date")
+    coupon = models.DecimalField(
+        max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name="Coupon Rate (%)"
+    )
     coupon_frequency = models.CharField(
         max_length=50,
-        choices=[('Annual', 'Annual'), ('Semi-Annual', 'Semi-Annual'), ('Quarterly', 'Quarterly'), ('Monthly', 'Monthly')]
+        choices=[('Annual', 'Annual'), ('Semi-Annual', 'Semi-Annual'), ('Quarterly', 'Quarterly'), ('Monthly', 'Monthly')],
+        verbose_name="Coupon Frequency"
     )
-    ISINCode = models.ForeignKey(ListedCompany, on_delete=models.CASCADE, to_field='ISINCode')
-    bond_purpose = models.TextField()
-    outstanding_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    ISINCode = models.ForeignKey(ListedCompany, on_delete=models.CASCADE, related_name="bonds", to_field='ISINCode', verbose_name="ISIN Code")
+    bond_purpose = models.TextField(verbose_name="Bond Purpose")
+    outstanding_amount = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Outstanding Amount")
+
+    class Meta:
+        verbose_name = "Listed Company Bond"
+        verbose_name_plural = "Listed Company Bonds"
+
+    def clean(self):
+        """Ensure outstanding amount does not exceed max supply."""
+        if self.max_supply and self.outstanding_amount > self.max_supply:
+            raise ValueError("Outstanding amount cannot exceed max supply.")
 
     def __str__(self):
-        return f"{self.token_name} ({self.token_symbol})"
+        return f"{self.token_name} ({self.token_symbol}) - {self.ISINCode.company_name}"
 
 
 class Investor(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)  # Links to Django's User model
-    investor_wallet = models.CharField(max_length=255, unique=True)
-    investor_name = models.CharField(max_length=255)
-    id_passport = models.CharField(max_length=50, unique=True)
-    registration_date = models.DateTimeField(auto_now_add=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="User")
+    investor_wallet = models.CharField(max_length=255, unique=True, verbose_name="Investor Wallet Address")
+    investor_name = models.CharField(max_length=255, verbose_name="Investor Name")
+    id_passport = models.CharField(max_length=50, unique=True, verbose_name="ID/Passport Number")
+    registration_date = models.DateTimeField(auto_now_add=True, verbose_name="Registration Date")
+
+    class Meta:
+        verbose_name = "Investor"
+        verbose_name_plural = "Investors"
 
     def __str__(self):
         return f"{self.investor_name} ({self.user.username})"
@@ -67,11 +88,15 @@ class InvestorBondBid(models.Model):
         ('Rejected', 'Rejected')
     ]
 
-    bid_id = models.AutoField(primary_key=True)
-    investor = models.ForeignKey(Investor, on_delete=models.CASCADE)
-    token = models.ForeignKey(ListedCompanyBond, on_delete=models.CASCADE)
-    bid_amount = models.DecimalField(max_digits=20, decimal_places=2)
-    bid_status = models.CharField(max_length=20, choices=BID_STATUS_CHOICES, default='Pending')
+    bid_id = models.AutoField(primary_key=True, verbose_name="Bid ID")
+    investor = models.ForeignKey(Investor, on_delete=models.CASCADE, related_name="bids", verbose_name="Investor")
+    token = models.ForeignKey(ListedCompanyBond, on_delete=models.CASCADE, related_name="bids", verbose_name="Token")
+    bid_amount = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Bid Amount")
+    bid_status = models.CharField(max_length=20, choices=BID_STATUS_CHOICES, default='Pending', verbose_name="Bid Status")
+
+    class Meta:
+        verbose_name = "Investor Bond Bid"
+        verbose_name_plural = "Investor Bond Bids"
 
     def __str__(self):
         return f"Bid {self.bid_id} - {self.investor.user.username} for {self.token.token_name}"
