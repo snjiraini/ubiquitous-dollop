@@ -9,6 +9,11 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import subprocess
 from .forms import InvestorForm, ListedCompanyBondForm
+from hedera import AccountBalanceQuery
+import os
+import json
+from dotenv import load_dotenv
+from hedera import AccountId, PrivateKey, Client
 
 def is_investor_admin(user):
     return user.is_authenticated and user.groups.filter(name='investor-admin').exists()
@@ -71,7 +76,33 @@ def client_bid_page(request):
     
     # Fetch bids for the logged-in investor
     investor_bids = InvestorBondBid.objects.filter(investor=request.user.investor)
+    
+    # Fetch investor details
+    investor = None
+    balance = "N/A"
 
+   
+
+
+    if request.user.is_authenticated:
+        investor = Investor.objects.filter(user=request.user).first()
+
+         #get_client
+        
+        OPERATOR_ID = AccountId.fromString(investor.investor_wallet)
+        OPERATOR_KEY = PrivateKey.fromString(investor.private_key)
+        client = Client.forTestnet()
+        client.setOperator(OPERATOR_ID, OPERATOR_KEY)
+        
+
+        if investor and investor.investor_wallet:
+            try:
+                balance_query = AccountBalanceQuery().setAccountId(investor.investor_wallet).execute(client)
+                balance = f"{balance_query.hbars} ℏ"  # Returns balance in HBAR
+            except Exception as e:
+                balance = f"Error: {str(e)}"
+
+    # Handle bond bidding form
     if request.method == 'POST':
         form = InvestorBondBidForm(request.POST)
         if form.is_valid():
@@ -82,5 +113,10 @@ def client_bid_page(request):
     else:
         form = InvestorBondBidForm()
 
-    return render(request, 'client_bid_page.html', {'form': form, 'investor_bids': investor_bids, 'bonds': bonds})
-
+    return render(request, 'client_bid_page.html', {
+        'form': form,
+        'investor_bids': investor_bids,
+        'bonds': bonds,
+        'investor': investor,
+        'wallet_balance': balance
+    })

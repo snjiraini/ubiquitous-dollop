@@ -10,6 +10,7 @@ from django.contrib import messages
 from .models import ListedCompany, ListedCompanyBond, Investor, InvestorBondBid
 from .forms import InvestorForm
 from . import create_account
+from . import create_token
 import time  # Import time module for sleep
 import traceback  # ✅ Import for detailed error logging
 
@@ -27,7 +28,7 @@ class InvestorAdmin(admin.ModelAdmin):
         if not obj.investor_wallet or len(obj.investor_wallet) <= 10:
             try:
                 account_data = create_account.generateHederaAccount()  # Generate Hedera account
-                time.sleep(10)  # ⏸ Pause for 10 seconds
+                # time.sleep(10)  # ⏸ Pause for 10 seconds
                 obj.investor_wallet = account_data.get("accountid")
                 obj.public_key = account_data.get("publickey")
                 obj.private_key = account_data.get("privatekey")
@@ -77,7 +78,49 @@ class ListedCompanyAdmin(admin.ModelAdmin):
 
     logo_preview.short_description = 'Company Logo'
 
+class ListedCompanyBondAdmin(admin.ModelAdmin):
+    list_display = ("token_name", "token_symbol", "initial_supply", "token_id")
+    search_fields = ("token_name", "token_symbol")
+    
+
+    def save_model(self, request, obj, form, change):
+        # Check if token_id is empty or has 10 or fewer characters
+        if not obj.token_id or len(obj.token_id) <= 10:
+            try:
+                # Extract values from the form fields
+                token_id = obj.token_id
+                token_name = obj.token_name
+                token_symbol = obj.token_symbol
+                initial_supply = obj.initial_supply
+
+                # Generate bond token on Hedera
+                token_data = create_token.generateBondToken(token_name, token_symbol, initial_supply)
+                # time.sleep(10)  # ⏸ Pause to ensure token creation completion
+
+                # Assign values to the model
+                obj.token_id = token_data.get("Tokenid")
+
+                if not obj.token_id:
+                    messages.error(request, "Failed to generate bond token. Please try again.")
+                    return  # Stop saving if token creation failed
+
+            except Exception as e:
+                messages.error(request, f"Error generating bond token: {str(e)}")
+                return  # Stop save on error
+
+        super().save_model(request, obj, form, change)  # ✅ Save only if successful
+        
+        # ✅ Add a success message with the generated Token ID
+        messages.success(
+            request,
+            f"✅ Bond Token Created Successfully!\n"
+            f"🔹 Token Name: {obj.token_name}\n"
+            f"🔹 Symbol: {obj.token_symbol}\n"
+            f"🔹 Initial Supply: {obj.initial_supply}\n"
+            f"🔹 Token ID: {obj.token_id}"
+        )
+
 admin.site.register(ListedCompany, ListedCompanyAdmin)
-admin.site.register(ListedCompanyBond)
+admin.site.register(ListedCompanyBond,ListedCompanyBondAdmin)
 admin.site.register(Investor, InvestorAdmin)
 admin.site.register(InvestorBondBid)

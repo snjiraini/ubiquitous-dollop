@@ -35,6 +35,7 @@ class ListedCompany(models.Model):
 
 
 class ListedCompanyBond(models.Model):
+    token_id = models.CharField(max_length=15, null=True, verbose_name="Token ID")
     token_name = models.CharField(max_length=255, unique=True, verbose_name="Token Name")
     token_symbol = models.CharField(max_length=10, unique=True, verbose_name="Token Symbol")
     initial_supply = models.DecimalField(max_digits=20, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Initial Supply")
@@ -75,8 +76,8 @@ class Investor(models.Model):
     registration_date = models.DateTimeField(auto_now_add=True, verbose_name="Registration Date")
 
     # Read-Only Keys for Display
-    public_key = models.TextField(blank=True, null=True, verbose_name="Hedera Public Key")
-    private_key = models.TextField(blank=True, null=True, verbose_name="Hedera Private Key (Store Securely)")
+    public_key = models.TextField(max_length=255,blank=True, null=True, verbose_name="Hedera Public Key")
+    private_key = models.TextField(max_length=255,blank=True, null=True, verbose_name="Hedera Private Key (Store Securely)")
 
     class Meta:
         verbose_name = "Investor"

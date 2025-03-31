@@ -10,16 +10,23 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="{% url 'client_bid_page' %}">Bond Marketplace</a>
+            
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
-                        <!-- <li class="nav-item">
-                            <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-                        </li> -->
-                        <form action="{% url 'investor_logout' %}" method="post" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger">Logout</button>
-                        </form>
+                    {% if user.is_authenticated and investor %}
+                        <li class="nav-item">
+                            <span class="nav-link text-white">
+                                <strong>{{ investor.investor_name }}</strong>  
+                                | Wallet: <code>{{ investor.investor_wallet }}</code>  
+                                | Balance: <strong>{{ wallet_balance }}</strong>
+                            </span>
+                        </li>
+                        <li class="nav-item">
+                            <form action="{% url 'investor_logout' %}" method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger">Logout</button>
+                            </form>
+                        </li>
                     {% else %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'login' %}">Login</a>
