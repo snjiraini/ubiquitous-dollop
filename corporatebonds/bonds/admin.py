@@ -11,6 +11,7 @@ from .models import ListedCompany, ListedCompanyBond, Investor, InvestorBondBid
 from .forms import InvestorForm
 from . import create_account
 import time  # Import time module for sleep
+import traceback  # ✅ Import for detailed error logging
 
 class InvestorAdmin(admin.ModelAdmin):
     form = InvestorForm
@@ -22,7 +23,8 @@ class InvestorAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         new_account = False  # Flag to check if a new account was generated
         
-        if not obj.investor_wallet:  # Only generate if it's empty
+        # Check if investor_wallet is empty or has 10 or fewer characters
+        if not obj.investor_wallet or len(obj.investor_wallet) <= 10:
             try:
                 account_data = create_account.generateHederaAccount()  # Generate Hedera account
                 time.sleep(10)  # ⏸ Pause for 10 seconds
@@ -36,6 +38,8 @@ class InvestorAdmin(admin.ModelAdmin):
                     return  # Stop saving if keys are missing
 
             except Exception as e:
+                print("❌ Error generating Hedera account:", str(e))  # ✅ Print error
+                traceback.print_exc()  # ✅ Show full error traceback
                 self.message_user(request, f"Error generating account: {str(e)}", level="error")
                 return  # Stop save on error
         
@@ -58,8 +62,7 @@ class InvestorAdmin(admin.ModelAdmin):
         """
         Override the default success message when saving changes in Django Admin.
         """
-        if "custom_success_message" in request.session:
-            self.message_user(request, request.session.pop("custom_success_message"), level="success")
+        # No need to set the success message in session. It's handled directly in save_model.
         return super().response_change(request, obj)
     
 class ListedCompanyAdmin(admin.ModelAdmin):
