@@ -29,6 +29,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(), name='investor_logout'),  # Proper logout path
     path('bonds/', include('bonds.urls')),
     path('admin/', admin.site.urls),
+
 ]
 
 # Serve media files during development

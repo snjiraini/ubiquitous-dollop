@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 
 class ListedCompany(models.Model):
     INDUSTRY_CHOICES = [
@@ -19,7 +20,7 @@ class ListedCompany(models.Model):
         ('Exchange Traded Fund', 'Exchange Traded Fund'),
     ]
 
-    ISINCode = models.CharField(max_length=12, unique=True, verbose_name="ISIN Code")
+    ISINCode = models.CharField(max_length=12, unique=True, verbose_name="ISIN Code", db_index=True)
     company_name = models.CharField(max_length=255, verbose_name="Company Name")
     trading_symbol = models.CharField(max_length=20, unique=True, db_index=True, verbose_name="Trading Symbol")
     industry = models.CharField(max_length=50, choices=INDUSTRY_CHOICES, default='Banking', verbose_name="Industry")
@@ -36,8 +37,8 @@ class ListedCompany(models.Model):
 class ListedCompanyBond(models.Model):
     token_name = models.CharField(max_length=255, unique=True, verbose_name="Token Name")
     token_symbol = models.CharField(max_length=10, unique=True, verbose_name="Token Symbol")
-    initial_supply = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Initial Supply")
-    treasure_account = models.CharField(max_length=255, verbose_name="Treasury Account")
+    initial_supply = models.DecimalField(max_digits=20, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Initial Supply")
+    treasury_account = models.CharField(max_length=255, verbose_name="Treasury Account")
     max_supply = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True, verbose_name="Max Supply")
     issue_date = models.DateField(verbose_name="Issue Date")
     maturity_date = models.DateField(verbose_name="Maturity Date")
@@ -49,9 +50,9 @@ class ListedCompanyBond(models.Model):
         choices=[('Annual', 'Annual'), ('Semi-Annual', 'Semi-Annual'), ('Quarterly', 'Quarterly'), ('Monthly', 'Monthly')],
         verbose_name="Coupon Frequency"
     )
-    ISINCode = models.ForeignKey(ListedCompany, on_delete=models.CASCADE, related_name="bonds", to_field='ISINCode', verbose_name="ISIN Code")
+    ISINCode = models.ForeignKey(ListedCompany, on_delete=models.CASCADE, related_name="bonds", to_field='ISINCode', verbose_name="ISIN Code", db_index=True)
     bond_purpose = models.TextField(verbose_name="Bond Purpose")
-    outstanding_amount = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Outstanding Amount")
+    outstanding_amount = models.DecimalField(max_digits=20, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Outstanding Amount")
 
     class Meta:
         verbose_name = "Listed Company Bond"
@@ -60,7 +61,7 @@ class ListedCompanyBond(models.Model):
     def clean(self):
         """Ensure outstanding amount does not exceed max supply."""
         if self.max_supply and self.outstanding_amount > self.max_supply:
-            raise ValueError("Outstanding amount cannot exceed max supply.")
+            raise ValidationError("Outstanding amount cannot exceed max supply.")
 
     def __str__(self):
         return f"{self.token_name} ({self.token_symbol}) - {self.ISINCode.company_name}"
@@ -68,10 +69,14 @@ class ListedCompanyBond(models.Model):
 
 class Investor(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="User")
-    investor_wallet = models.CharField(max_length=255, unique=True, verbose_name="Investor Wallet Address")
+    investor_wallet = models.CharField(max_length=255, unique=True, verbose_name="Investor Wallet Address", db_index=True)
     investor_name = models.CharField(max_length=255, verbose_name="Investor Name")
-    id_passport = models.CharField(max_length=50, unique=True, verbose_name="ID/Passport Number")
+    id_passport = models.CharField(max_length=50, unique=True, verbose_name="ID/Passport Number", db_index=True)
     registration_date = models.DateTimeField(auto_now_add=True, verbose_name="Registration Date")
+
+    # Read-Only Keys for Display
+    public_key = models.TextField(blank=True, null=True, verbose_name="Hedera Public Key")
+    private_key = models.TextField(blank=True, null=True, verbose_name="Hedera Private Key (Store Securely)")
 
     class Meta:
         verbose_name = "Investor"
@@ -91,7 +96,7 @@ class InvestorBondBid(models.Model):
     bid_id = models.AutoField(primary_key=True, verbose_name="Bid ID")
     investor = models.ForeignKey(Investor, on_delete=models.CASCADE, related_name="bids", verbose_name="Investor")
     token = models.ForeignKey(ListedCompanyBond, on_delete=models.CASCADE, related_name="bids", verbose_name="Token")
-    bid_amount = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Bid Amount")
+    bid_amount = models.DecimalField(max_digits=20, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Bid Amount")
     bid_status = models.CharField(max_length=20, choices=BID_STATUS_CHOICES, default='Pending', verbose_name="Bid Status")
 
     class Meta:

@@ -3,10 +3,13 @@
 {% block title %}Homepage{% endblock %}
 
 {% block content %}
-<div class="text-center mt-5">
-    <h2>Welcome, {{ user.username }}</h2>
+<div class="container text-center mt-5">
+    <h2>Welcome, {{ user.username }}</h2>            
     <p class="lead">Manage your investments and bids here.</p>
 
     <a href="{% url 'client_bid_page' %}" class="btn btn-primary">Place a Bid</a>
+    
+   
+    
 </div>
 {% endblock %}

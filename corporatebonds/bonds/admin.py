@@ -1,60 +1,67 @@
 from django.utils.html import format_html
+from django.urls import path
+from django.shortcuts import redirect
+from django.core.exceptions import PermissionDenied
 from django.utils.safestring import mark_safe
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import User
+from django.contrib import messages
 from .models import ListedCompany, ListedCompanyBond, Investor, InvestorBondBid
-
-class InvestorForm(forms.ModelForm):
-    class Meta:
-        model = Investor
-        fields = '__all__'  # Keep all fields
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['investor_wallet'].widget = forms.HiddenInput()  # Hide the original field
+from .forms import InvestorForm
+from . import create_account
+import time  # Import time module for sleep
 
 class InvestorAdmin(admin.ModelAdmin):
-    form = InvestorForm  # Use the custom form
-    list_display = ('investor_name', 'investor_wallet', 'id_passport', 'registration_date')
-    readonly_fields = ('wallet_with_button',)
-
-    def wallet_with_button(self, obj):
-        """
-        Custom field that includes a text box and a button to generate a Hedera Wallet Address.
-        """
-        wallet_value = obj.investor_wallet if obj.investor_wallet else ""  # Keep existing value
-        return mark_safe(f"""
-            <input type="text" id="wallet_address" name="investor_wallet" value="{wallet_value}" class="vTextField" readonly>
-            <button type="button" class="button" onclick="generateHederaWallet()">Generate Wallet</button>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.0.3/web3.min.js"></script>
-            <script>
-                async function generateHederaWallet() {{
-                    try {{
-                        const response = await fetch("https://testnet.mirrornode.hedera.com/api/v1/accounts", {{
-                            method: "POST",
-                            headers: {{ "Content-Type": "application/json" }},
-                            body: JSON.stringify({{ "key": {{ "key": "ed25519" }} }})
-                        }});
-                        const data = await response.json();
-                        document.getElementById("wallet_address").value = data.account || "Error generating wallet";
-                    }} catch (error) {{
-                        console.error("Wallet Generation Error:", error);
-                        alert("Error generating wallet. Please try again.");
-                    }}
-                }}
-            </script>
-        """)
-
-    wallet_with_button.short_description = "Investor Wallet Address"
+    form = InvestorForm
+    list_display = ("investor_name", "user", "investor_wallet", "registration_date")
+    search_fields = ("investor_name", "user__username", "id_passport", "investor_wallet")
+    list_filter = ("registration_date",)
+    readonly_fields = ("registration_date", "public_key", "private_key")
 
     def save_model(self, request, obj, form, change):
-        """
-        Ensure the generated wallet address is saved when the form is submitted.
-        """
-        obj.investor_wallet = request.POST.get('investor_wallet', obj.investor_wallet)
-        super().save_model(request, obj, form, change)
+        new_account = False  # Flag to check if a new account was generated
+        
+        if not obj.investor_wallet:  # Only generate if it's empty
+            try:
+                account_data = create_account.generateHederaAccount()  # Generate Hedera account
+                time.sleep(10)  # ⏸ Pause for 10 seconds
+                obj.investor_wallet = account_data.get("accountid")
+                obj.public_key = account_data.get("publickey")
+                obj.private_key = account_data.get("privatekey")
+                new_account = True  # Set flag if a new account was generated
 
+                if not obj.investor_wallet or not obj.public_key or not obj.private_key:
+                    self.message_user(request, "Failed to generate Hedera account. Please try again.", level="error")
+                    return  # Stop saving if keys are missing
+
+            except Exception as e:
+                self.message_user(request, f"Error generating account: {str(e)}", level="error")
+                return  # Stop save on error
+        
+        super().save_model(request, obj, form, change)  # ✅ Save only if generation is successful
+        
+        # ✅ Add the success message with the generated details
+        if new_account:
+            self.message_user(
+                request,
+                f"✅ Hedera Account Generated Successfully!\n"
+                f"🔹 Account ID: {obj.investor_wallet}\n"
+                f"🔹 Public Key: {obj.public_key}\n"
+                f"🔹 Private Key: {obj.private_key}",
+                level="success"
+            )
+        else:
+            self.message_user(request, "Investor details updated successfully.", level="info")
+    
+    def response_change(self, request, obj):
+        """
+        Override the default success message when saving changes in Django Admin.
+        """
+        if "custom_success_message" in request.session:
+            self.message_user(request, request.session.pop("custom_success_message"), level="success")
+        return super().response_change(request, obj)
+    
 class ListedCompanyAdmin(admin.ModelAdmin):
     list_display = ('company_name', 'trading_symbol', 'industry', 'logo_preview')
     list_filter = ('industry',)
